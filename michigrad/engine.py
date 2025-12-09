@@ -63,6 +63,18 @@ class Value:
 
         return out
 
+    def tanh(self):
+        x = self.data
+        t = math.tanh(x)
+        out = Value(t, (self,), 'tanh')
+
+        def _backward():
+            # derivada tanh'(x) = 1 - tanh(x)^2
+            self.grad += (1 - t**2) * out.grad
+
+        out._backward = _backward
+        return out
+
 
     def backward(self):
 
