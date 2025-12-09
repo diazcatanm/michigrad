@@ -111,7 +111,7 @@ def bucle_entrenamiento(epocas=30, tasa_aprendizaje=0.1):
         for p in modelo.parameters():
             p.data += -tasa_aprendizaje * p.grad
 
-        # 5) (Opcional) Registro para mostrar que la pérdida baja
+        # 5) log de que la pérdida baja
         if epoca % 5 == 0:
             print(f"Época {epoca:02d} | Pérdida = {perdida_total.data:.6f}")
 
@@ -130,30 +130,11 @@ def predecir_clase(prediccion):
     clase_predicha = 0 if valores[0] >= valores[1] else 1
     return clase_predicha, valores
 
-def calculo_mejor_tasa_epocas():
-    lr_list = [0.01, 0.1, 1.0]
-    epocas_list = [10, 20, 30, 40, 50]
-
-    print("\n=== Tabla de pérdidas para distintas tasas y épocas ===\n")
-    print("Tasa\tÉpocas\tPérdida final")
-
-    for lr in lr_list:
-        global modelo
-        modelo = MLP(2, [2])  # modelo lineal nuevo para cada tasa
-
-        for ep in epocas_list:
-            bucle_entrenamiento(epocas=ep, tasa_aprendizaje=lr)
-            perdida_final, _ = forwardPass_loss()
-            print(f"{lr}\t{ep}\t{perdida_final.data:.6f}")
-
-        print()
-
 
 # ------------------------------------------------------------
 # prog ppal
 # ------------------------------------------------------------
 if __name__ == "__main__":
-    calculo_mejor_tasa_epocas()
     print("Estructura del modelo:")
     print(modelo)
 
