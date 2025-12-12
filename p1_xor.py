@@ -1,149 +1,119 @@
-from michigrad.nn import MLP
+import random
+from michigrad.nn import Module, Layer
 from michigrad.visualize import show_graph
 
+
+# ------------------------------------------------------------
+# MODELO XOR {2 -> 2 -> 1 sin fuc de activacion}
+# ------------------------------------------------------------
+class XORModule(Module):
+    def __init__(self):
+        self.l1 = Layer(2, 2, nonlin=False)
+        self.l2 = Layer(2, 1, nonlin=False)
+
+    def __call__(self, x):
+        h = self.l1(x)
+        out = self.l2(h)
+        return out[0] if isinstance(out, list) else out
+
+    def parameters(self):
+        return self.l1.parameters() + self.l2.parameters()
+
+# ------------------------------------------------------------
+# VARIABLES GLOBALES
+# ------------------------------------------------------------
+xor = None
+
 # Set de datos - tabla de verdad XOR
-#
-# p | q | xor
-#---|---|----
-# V | V | F
-# V | F | V
-# F | V | V
-# F | F | F
-
-x_entradas = [
-    [0.0, 0.0],
-    [0.0, 1.0],
-    [1.0, 0.0],
-    [1.0, 1.0],
-]
-
-# Salida segun xor:
-# 0 -> [1, 0]
-# 1 -> [0, 1]
-y_clases = [
-    [1.0, 0.0],  # XOR(0,0) = 0
-    [0.0, 1.0],  # XOR(0,1) = 1
-    [0.0, 1.0],  # XOR(1,0) = 1
-    [1.0, 0.0],  # XOR(1,1) = 0
-]
+xs = [
+    [0.0,0.0],
+    [0.0,1.0],
+    [1.0,0.0],
+    [1.0,1.0]
+    ]
+ys = [0.0, 1.0, 1.0, 0.0]
 
 # ------------------------------------------------------------
-# modelo disenado con una capa lineal con 2 neuronas
-# MLP(2, [2]) = entrada de 2, una capa con 2 neuronas sin func de activacion
+# FUNCIONES
 # ------------------------------------------------------------
-modelo = MLP(2, [2])
+#Reinicia pesos delm odelo glbal
+def reset_modelo(seed=40):
+    global xor
+    if seed is not None:
+        random.seed(seed)
+    xor = XORModule()
 
+def entrenamiento(epocas=200, tasa_aprendizaje=0.01, log_cada=5):
+    global xor
+    if xor is None:
+        reset_modelo(seed=40)
+    
+    loss = None
 
-# ------------------------------------------------------------
-# func para fordward pass + calc de loss
-# ------------------------------------------------------------
-def forwardPass_loss():
-    """
-    Realiza el forward del modelo sobre las 4 entradas de XOR
-    y calcula la pérdida total como suma del error cuadratico medio () sobre todos los ejemplos.
-    Devuelve:
-      - perdida_total: Value escalar
-      - predicciones: lista de listas [Value, Value] (una por ejemplo)
-    """
-    # 1) Forward: predicciones para cada entrada
-    predicciones = [modelo(x) for x in x_entradas]
-
-    # 2) Pérdida: MSE por ejemplo y luego suma total
-    perdidas_por_ejemplo = []
-    for pred, clase_real in zip(predicciones, y_clases):
-        # MSE: sum_i (pred_i - clase_real_i)^2
-        terminos = [(p - t) ** 2 for p, t in zip(pred, clase_real)]
-        perdida_ejemplo = sum(terminos)
-        perdidas_por_ejemplo.append(perdida_ejemplo)
-
-    perdida_total = sum(perdidas_por_ejemplo)
-    return perdida_total, predicciones
-
-
-# ------------------------------------------------------------
-# func para graficar el grafo de 1 sec de entrenamiento
-# ------------------------------------------------------------
-def graficar_secuencia_entrenamiento():
-
-    # 1) FORWARD + LOOS
-    perdida, _ = forwardPass_loss()
-    print(f"Pérdida inicial (antes de entrenar): {perdida.data:.6f}")
-
-    # 2) Grafico dsp de FORWARD
-    dot_forward = show_graph(perdida, format="svg", rankdir="LR")
-    dot_forward.render("tp9_forward", cleanup=True)
-    print("Grafo generado (forward): tp9_forward.svg")
-
-    # 3) ZERO GRAD
-    modelo.zero_grad()
-
-    # 4) BACKWARD/BACKPROPAGATION
-    perdida.backward()
-
-    # 5) Grafico dsp de BACKPROPAGATION
-    dot_backward = show_graph(perdida, format="svg", rankdir="LR")
-    dot_backward.render("tp9_backpropagation", cleanup=True)
-    print("Grafo generado (backpropagation): tp9_backpropagation.svg")
-
-
-# ------------------------------------------------------------
-# BUCLE DE ENTRENAMIENTO 
-#   1. Forward
-#   2. Loss
-#   3. Zero grad
-#   4. Backward
-#   5. Update
-# ------------------------------------------------------------
-
-def bucle_entrenamiento(epocas=30, tasa_aprendizaje=0.1):
     for epoca in range(epocas):
+        # Forward
+        yhats = [xor(x) for x in xs]
 
-        # 1) FORWARD + PÉRDIDA
-        perdida_total, _ = forwardPass_loss()
+        # Loss (MSE promedio)
+        loss = sum(((y - yhat) ** 2 for y, yhat in zip(ys, yhats))) / 4
 
-        # 2) ZERO GRAD
-        modelo.zero_grad()
+        # Zero grad
+        xor.zero_grad()
 
-        # 3) BACKWARD
-        perdida_total.backward()
+        # Backward
+        loss.backward()
 
-        # 4) UPDATE de parámetros
-        for p in modelo.parameters():
-            p.data += -tasa_aprendizaje * p.grad
+        # Update
+        for p in xor.parameters():
+            p.data -= tasa_aprendizaje * p.grad
 
-        # 5) log de que la pérdida baja
-        if epoca % 5 == 0:
-            print(f"Época {epoca:02d} | Pérdida = {perdida_total.data:.6f}")
+        # Log
+        if log_cada and epoca % log_cada == 0:
+            print(f"Época {epoca:02d} | Pérdida = {loss.data:.6f}")
 
+    return loss
 
-# ------------------------------------------------------------
-# func para interpretar la clase predicha a partir de [y0, y1]
-# ------------------------------------------------------------
-def predecir_clase(prediccion):
-    """
-    Recibe: prediccion = [Value, Value]
-    Devuelve:
-      - clase_predicha: 0 o 1
-      - valores: lista [y0, y1] (floats) para imprimir
-    """
-    valores = [v.data for v in prediccion]
-    clase_predicha = 0 if valores[0] >= valores[1] else 1
-    return clase_predicha, valores
-
+reset_modelo(seed=40)
 
 # ------------------------------------------------------------
-# prog ppal
+# MAIN
 # ------------------------------------------------------------
 if __name__ == "__main__":
-    print("Estructura del modelo:")
-    print(modelo)
 
-    graficar_secuencia_entrenamiento()
+    epocas = 200 # seteado luego de evaluar script de calculo
+    tasa_aprendizaje = 0.01 # seteado luego de evaluar script de calculo
 
-    bucle_entrenamiento(epocas=30, tasa_aprendizaje=0.1)
+    reset_modelo(seed=40)
 
-    print("\n=== Predicciones finales del modelo lineal sobre XOR ===")
-    for x, clase_real in zip(x_entradas, y_clases):
-        pred = modelo(x)
-        clase_predicha, valores = predecir_clase(pred)
-        print(f"x = {x} -> pred = {valores} -> clase_predicha = {clase_predicha} | clase_real = {clase_real}")
+    # ------------------------------------------------------------
+    # GRAFICOS PARA 1ER SECUENCIA DE ENTRENAMIENTO
+    # ------------------------------------------------------------
+
+    #forward 1er sec de entrenamiento
+    yhat0 = [xor(x) for x in xs] #fw
+    loss0 = sum(((y - yhat)**2 for y, yhat in zip(ys, yhat0))) / 4 #loss
+
+    #Grafico luego 1er forward
+    grafico_fw = show_graph(loss0, format="svg", rankdir="LR")
+    grafico_fw.render("tp9_forward", cleanup=True)
+
+    #backward 1er sec de entramiento
+    xor.zero_grad()
+    loss0.backward()
+
+    #Grafico  luego 1er backward
+    grafico_bw = show_graph(loss0, format="svg", rankdir="LR")
+    grafico_bw.render("tp9_backpropagation", cleanup=True)
+
+    # ------------------------------------------------------------
+    # ENTRENAMIENTO COMPLETO
+    # ------------------------------------------------------------
+
+    loss_final = entrenamiento(epocas=epocas, tasa_aprendizaje=tasa_aprendizaje, log_cada=5)
+
+
+    print("\nLoss final:", loss_final.data)
+    print("Predicciones finales:")
+    for x, y in zip(xs, ys):
+        yhat = xor(x).data
+        print(f"x = {x} -> y_hat = {yhat:.4f} | y_true = {y}")

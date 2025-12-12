@@ -1,27 +1,28 @@
-import importlib
-from prueba_calculo_tasaAprendizaje_epocas import calculo_tasaAprendizaje_epocas
-import p1_xor
-
+from p1_xor import reset_modelo, entrenamiento
 
 # Tasas de aprendizaje a evaluar
-error_list = [0.01, 0.1, 1.0]
+tasas = [0.01, 0.1, 1.0]
 
+# Épocas a evaluar  
+epocas_list = [25, 50, 100, 200, 500, 1000]
 
-def main():
-    # Archivo donde escribir los results
-    with open("tablas_tasas_aprendizaje.txt", "w", encoding="utf-8") as f:
-        for err in error_list:
-            # Reset de modelo
-            importlib.reload(p1_xor)
-
+def generar_tablas(archivo_path="tablas_tasas_aprendizaje.txt", seed=40):
+    with open(archivo_path, "w", encoding="utf-8") as f:
+        for tasa in tasas:
             f.write("\n" + "=" * 60 + "\n")
-            f.write(f"Resultados para tasa de aprendizaje = {err}\n")
-            f.write("=" * 60 + "\n")
+            f.write(f"Resultados para tasa de aprendizaje = {tasa}\n")
+            f.write("=" * 60 + "\n\n")
 
-            calculo_tasaAprendizaje_epocas(err, archivo=f)
+            f.write(f"=== Tabla de pérdidas para tasa de aprendizaje = {tasa} ===\n")
+            f.write("lr\tÉpocas\tPérdida final\n")
+
+            for ep in epocas_list:
+                # modelo nuevo para cada experimento, asi no acumula
+                reset_modelo(seed=seed)
+
+                loss_final = entrenamiento(epocas=ep, tasa_aprendizaje=tasa, log_cada=0)
+                f.write(f"{tasa}\t{ep}\t{loss_final.data:.6f}\n")
 
 
 if __name__ == "__main__":
-    main()
-
-
+    generar_tablas()
