@@ -1,4 +1,4 @@
-from michigrad.nn import MLP
+from michigrad.nn import MLP, Linear, ReLU, Tanh, Sigmoid
 from michigrad.visualize import show_graph
 
 # Set de datos - tabla de verdad XOR
@@ -31,7 +31,7 @@ y_clases = [
 # modelo disenado con una capa lineal con 2 neuronas
 # MLP(2, [2]) = entrada de 2, una capa con 2 neuronas sin func de activacion
 # ------------------------------------------------------------
-modelo = MLP(2, [2])
+modelo = MLP(2, [(2, Linear)])
 
 
 # ------------------------------------------------------------

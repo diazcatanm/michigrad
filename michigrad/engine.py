@@ -78,7 +78,7 @@ class Value:
 
     def sigmoid(self):
         x = self.data
-        x = 1. / (1. + math.exp(-v))
+        x = 1. / (1. + math.exp(-x))
         out = Value(x, (self,), 'sigmoid')
 
         def _backward():
