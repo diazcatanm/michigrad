@@ -12,14 +12,17 @@ class Module:
 
 class Neuron(Module):
 
-    def __init__(self, nin, nonlin=True):
+    def __init__(self, nin): # sacamos el parametro nonlin=True 
         self.w = [Value(random.uniform(-1,1)) for _ in range(nin)]
         self.b = Value(0)
-        self.nonlin = nonlin
+        # self.nonlin = nonlin
 
     def __call__(self, x):
-        act = sum((wi*xi for wi,xi in zip(self.w, x)), self.b)
-        return act.relu() if self.nonlin else act
+        #act = sum((wi*xi for wi,xi in zip(self.w, x)), self.b)
+        #return act.relu() if self.nonlin else act
+    
+        return sum((wi*xi for wi, xi in zip(self.w, x)), self.b)
+
 
     def parameters(self):
         return self.w + [self.b]
@@ -30,7 +33,7 @@ class Neuron(Module):
 class Layer(Module):
 
     def __init__(self, nin, nout, **kwargs):
-        self.neurons = [Neuron(nin, **kwargs) for _ in range(nout)]
+        self.neurons = [Neuron(nin) for _ in range(nout)] # sacamos el parametro **kwargs
 
     def __call__(self, x):
         out = [n(x) for n in self.neurons]
@@ -46,7 +49,14 @@ class MLP(Module):
 
     def __init__(self, nin, nouts):
         sz = [nin] + nouts
-        self.layers = [Layer(sz[i], sz[i+1], nonlin=i!=len(nouts)-1) for i in range(len(nouts))]
+        # self.layers = [Layer(sz[i], sz[i+1], nonlin=i!=len(nouts)-1) for i in range(len(nouts))]
+        self.layers = []
+
+        for i in range(len(nouts)):
+            self.layers.append(Layer(sz[i], sz[i+1]))
+            # ya NO agregamos activación automática
+            # ahora la activación será agregada manualmente por el usuario
+
 
     def __call__(self, x):
         for layer in self.layers:
@@ -58,3 +68,24 @@ class MLP(Module):
 
     def __repr__(self):
         return f"MLP of [{', '.join(str(layer) for layer in self.layers)}]"
+    
+class ReLU(Module):
+    def __call__(self, x):
+        return x.relu()
+
+    def parameters(self):
+        return []
+
+class Tanh(Module):
+    def __call__(self, x):
+        return x.tanh()
+
+    def parameters(self):
+        return []
+
+class Sigmoid(Module):
+    def __call__(self, x):
+        return x.sigmoid()
+
+    def parameters(self):
+        return []
