@@ -1,28 +1,11 @@
 import random
-from michigrad.nn import Module, Layer
+from michigrad.nn import MLP, Linear, ReLU, Tanh, Sigmoid
 from michigrad.visualize import show_graph
 
 
 # ------------------------------------------------------------
-# MODELO XOR {2 -> 2 -> 1 sin fuc de activacion}
-# ------------------------------------------------------------
-class XORModule(Module):
-    def __init__(self):
-        self.l1 = Layer(2, 2, nonlin=False)
-        self.l2 = Layer(2, 1, nonlin=False)
-
-    def __call__(self, x):
-        h = self.l1(x)
-        out = self.l2(h)
-        return out[0] if isinstance(out, list) else out
-
-    def parameters(self):
-        return self.l1.parameters() + self.l2.parameters()
-
-# ------------------------------------------------------------
 # VARIABLES GLOBALES
 # ------------------------------------------------------------
-xor = None
 
 # Set de datos - tabla de verdad XOR
 xs = [
@@ -36,54 +19,49 @@ ys = [0.0, 1.0, 1.0, 0.0]
 # ------------------------------------------------------------
 # FUNCIONES
 # ------------------------------------------------------------
-#Reinicia pesos delm odelo glbal
-def reset_modelo(seed=40):
-    global xor
+
+def generar_modelo(seed=40, funcion=Linear):
     if seed is not None:
         random.seed(seed)
-    xor = XORModule()
+    # 2 inputs, salida lineal, y una capa intermedia con función a elección
+    return MLP(2, [(2, funcion), (1, Linear)])
 
-def entrenamiento(epocas=200, tasa_aprendizaje=0.01, log_cada=5):
-    global xor
-    if xor is None:
-        reset_modelo(seed=40)
-    
+def entrenamiento(mlp, epocas=200, tasa_aprendizaje=0.01, log_cada=5):    
     loss = None
 
     for epoca in range(epocas):
-        # Forward
-        yhats = [xor(x) for x in xs]
+        # Forward. En un modelo perfecto, el resultado sería igual a ys
+        yhats = [mlp(x) for x in xs]
 
         # Loss (MSE promedio)
-        loss = sum(((y - yhat) ** 2 for y, yhat in zip(ys, yhats))) / 4
+        loss = sum(((y - yhat) ** 2 for y, yhat in zip(ys, yhats))) / len(ys)
 
         # Zero grad
-        xor.zero_grad()
+        mlp.zero_grad()
 
         # Backward
         loss.backward()
 
         # Update
-        for p in xor.parameters():
+        for p in mlp.parameters():
             p.data -= tasa_aprendizaje * p.grad
 
         # Log
         if log_cada and epoca % log_cada == 0:
-            print(f"Época {epoca:02d} | Pérdida = {loss.data:.6f}")
+            print(f"Época {epoca:02d} | Pérdida = {loss.data:.6f} | Resultados = [{', '.join(f'{n.data:.3f}' for n in yhats)}]")
 
     return loss
 
-reset_modelo(seed=40)
+def punto1():
+    print("Punto 1")
+    punto_1_o_3(epocas = 200, tasa = 0.01, funcion = Linear, prefijo = "Punto 1 - ", log_cada = 20)
 
-# ------------------------------------------------------------
-# MAIN
-# ------------------------------------------------------------
-if __name__ == "__main__":
+def punto3():
+    print("Punto 3")
+    punto_1_o_3(epocas = 2000, tasa = 0.3, funcion = Sigmoid, prefijo = "Punto 3 - ", log_cada = 100)
 
-    epocas = 200 # seteado luego de evaluar script de calculo
-    tasa_aprendizaje = 0.01 # seteado luego de evaluar script de calculo
-
-    reset_modelo(seed=40)
+def punto_1_o_3(epocas = 200, log_cada = 5, tasa = 0.01, funcion = Linear, prefijo = " - "):
+    xor = generar_modelo(funcion = funcion)
 
     # ------------------------------------------------------------
     # GRAFICOS PARA 1ER SECUENCIA DE ENTRENAMIENTO
@@ -95,7 +73,7 @@ if __name__ == "__main__":
 
     #Grafico luego 1er forward
     grafico_fw = show_graph(loss0, format="svg", rankdir="LR")
-    grafico_fw.render("tp9_forward", cleanup=True)
+    grafico_fw.render(prefijo + "forward", cleanup=True)
 
     #backward 1er sec de entramiento
     xor.zero_grad()
@@ -103,13 +81,13 @@ if __name__ == "__main__":
 
     #Grafico  luego 1er backward
     grafico_bw = show_graph(loss0, format="svg", rankdir="LR")
-    grafico_bw.render("tp9_backpropagation", cleanup=True)
+    grafico_bw.render(prefijo + "backpropagation", cleanup=True)
 
     # ------------------------------------------------------------
     # ENTRENAMIENTO COMPLETO
     # ------------------------------------------------------------
 
-    loss_final = entrenamiento(epocas=epocas, tasa_aprendizaje=tasa_aprendizaje, log_cada=5)
+    loss_final = entrenamiento(xor, epocas=epocas, tasa_aprendizaje=tasa, log_cada=log_cada)
 
 
     print("\nLoss final:", loss_final.data)
@@ -117,3 +95,10 @@ if __name__ == "__main__":
     for x, y in zip(xs, ys):
         yhat = xor(x).data
         print(f"x = {x} -> y_hat = {yhat:.4f} | y_true = {y}")
+
+# ------------------------------------------------------------
+# MAIN
+# ------------------------------------------------------------
+if __name__ == "__main__":
+    punto1()
+    punto3()
