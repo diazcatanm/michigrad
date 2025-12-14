@@ -82,8 +82,8 @@ class Value:
         out = Value(x, (self,), 'sigmoid')
 
         def _backward():
-            x = out.data
-            x = math.exp(x) / (1. + math.exp(-x) ** 2)
+            x = self.data
+            x = math.exp(-x) / ((1. + math.exp(-x)) ** 2)
             self.grad += out.grad * x
         out._backward = _backward
 
