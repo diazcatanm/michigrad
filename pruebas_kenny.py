@@ -7,7 +7,7 @@ from michigrad.visualize import show_graph
 from michigrad.nn import MLP, Linear, ReLU, Tanh, Sigmoid
 
 def graficar(root, format='svg', rankdir='LR', path='graph'):
-    g = show_graph(L, rankdir="TB",format="png")
+    g = show_graph(root, rankdir="TB",format="png")
     g.render("graph", cleanup=True)
 
 def prueba_grafico():
@@ -89,3 +89,13 @@ def prueba_nn():
     nn = MLP(2, [(4, ReLU), (3, Tanh), (4, Sigmoid), (3, Linear)])
     print(nn([1, 2, 3]))
 prueba_nn()
+
+
+def prueba_graficos_2():
+    A = Value(np.random.random(), name='A')
+    B = A.sigmoid()
+    B.name = "B"
+
+    graficar(B)
+
+prueba_graficos_2()

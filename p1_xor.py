@@ -1,5 +1,6 @@
 import random
 from michigrad.nn import MLP, Linear, ReLU, Tanh, Sigmoid
+from michigrad.engine import Value
 from michigrad.visualize import show_graph
 
 
@@ -62,14 +63,46 @@ def punto3():
 
 def punto_1_o_3(epocas = 200, log_cada = 5, tasa = 0.01, funcion = Linear, prefijo = " - "):
     xor = generar_modelo(funcion = funcion)
-
+    i = 0
+    for layer in xor.layers:
+        for neuron in layer.neurons:
+            # Las dos neuronas intermedias, y la de salida
+            nombre = "N" + ["1", "2", "Out"][i]
+            neuron.b.name = "b de " + nombre
+            for j in range(len(neuron.w)):
+                neuron.w[j].name = "w" + str(j) + " de " + nombre
+            i += 1
+    
+    # ------------------------------------------------------------
+    # Inputs y outputs con nombre (para los gráficos)
+    # ------------------------------------------------------------
+    ys2 = []
+    for i in range(4):
+        ys2.append(Value(ys[i], name= "y" + str(i)))
+    xs2 = []
+    for i in range(4):
+        v = []
+        for j in range(2):
+            v.append(
+                Value(xs[i][j], name = f"Input {i},{j}")
+            )
+        xs2.append(v)
+    
     # ------------------------------------------------------------
     # GRAFICOS PARA 1ER SECUENCIA DE ENTRENAMIENTO
     # ------------------------------------------------------------
 
     #forward 1er sec de entrenamiento
-    yhat0 = [xor(x) for x in xs] #fw
-    loss0 = sum(((y - yhat)**2 for y, yhat in zip(ys, yhat0))) / 4 #loss
+    
+    yhat0 = [xor(x) for x in xs2] #fw
+    
+    loss0 = sum(((y - yhat)**2 for y, yhat in zip(ys2, yhat0))) / 4 #loss
+    
+    i = 1
+    for y in yhat0:
+        y.name = "ŷ" + str(i)
+        i += 1
+    loss0.name = "L"
 
     #Grafico luego 1er forward
     grafico_fw = show_graph(loss0, format="svg", rankdir="LR")
@@ -78,6 +111,9 @@ def punto_1_o_3(epocas = 200, log_cada = 5, tasa = 0.01, funcion = Linear, prefi
     #backward 1er sec de entramiento
     xor.zero_grad()
     loss0.backward()
+
+    for p in xor.parameters():
+        p.data -= tasa * p.grad
 
     #Grafico  luego 1er backward
     grafico_bw = show_graph(loss0, format="svg", rankdir="LR")
