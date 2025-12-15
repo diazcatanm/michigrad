@@ -112,9 +112,6 @@ def punto_1_o_3(epocas = 200, log_cada = 5, tasa = 0.01, funcion = Linear, prefi
     xor.zero_grad()
     loss0.backward()
 
-    for p in xor.parameters():
-        p.data -= tasa * p.grad
-
     #Grafico  luego 1er backward
     grafico_bw = show_graph(loss0, format="svg", rankdir="LR")
     grafico_bw.render(prefijo + "backpropagation", cleanup=True)
